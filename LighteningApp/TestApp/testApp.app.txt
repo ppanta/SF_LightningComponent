@@ -1,0 +1,9 @@
+<aura:application access="GLOBAL" extends="ltng:outApp"> <!-- extends="ltng:outApp" "force:slds" -->
+  <!-- Create attribute to store lookup value as a sObject--> 
+  <!-- aura:attribute name="selectedLookUpRecord" type="sObject" default="{}"/ -->
+  <aura:dependency resource="c:customLookupAppComponent"/>
+ 
+  <!-- c:customLookup objectAPIName="School_Contact_Affiliations__c" IconName="standard:account" selectedRecord="{!v.selectedLookUpRecord}" label="Account Name"/ -->
+  <c:customLookup objectAPIName="School__c" IconName="standard:related_list" selectedRecord="{!v.selectedLookUpRecord}" label="School Name"/> 
+<!-- here c: is org. namespace prefix-->
+</aura:application>

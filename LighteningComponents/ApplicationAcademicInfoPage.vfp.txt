@@ -1,0 +1,995 @@
+<apex:page docType="html-5.0" applyHtmlTag="false" showHeader="false" sidebar="false" standardStylesheets="false" controller="NewApplicationFlowController">
+    <!--[if lt IE 8]>       
+    <html class="no-js lt-ie8 lt-ie9 lt-ie10" lang="en">
+    <![endif]-->
+    <!--[if IE 8]>          
+    <html class="no-js ie8 lt-ie9 lt-ie10" lang="en">
+    <![endif]-->
+    <!--[if IE 9]>          
+    <html class="no-js ie9 lt-ie10" lang="en">
+    <![endif]-->
+    <!--[if gt IE 9]><!--> 
+    <html class="no-js" lang="en">
+        <!--<![endif]-->
+        <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"/>
+        <apex:stylesheet value="{!URLFOR($Resource.ApplicationDesign, 'css/styles.css')}" />
+        <apex:includeScript value="{!URLFOR($Resource.ApplicationDesign, 'js/app-min.js')}"/>
+        <style>
+            .lookupInput a {
+            	background-image: url({!URLFOR($Resource.searchimg)});
+            }
+        </style>
+        <apex:form >
+            <head>
+                <title>Florida Polytechnic Application</title>
+                <!--[if lt IE 9]><script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+                <script src="https://use.typekit.net/zul3swx.js"></script>
+                <script>try{Typekit.load();}catch(e){}</script>
+                <script>
+                    var delayedCall;
+                    function lookupHandler(field, type) {
+                        //This will delay the call to the function until the user stops typing for 250ms
+                        clearTimeout(delayedCall);
+                        delayedCall = setTimeout(function() {lookupAccounts(field, type);}, 250);
+                    }
+
+					//The lightning searchbox javascript/ajax
+					$Lightning.use("c:testApp", function() {
+                        $Lightning.createComponent(
+                           "c:customLookup",
+                           { 
+                               label : "School Name",
+                               objectAPIName : "School__c",
+                               IconName : "standard:related_list"
+                           },
+						   "lightning",
+                           function(cmp) { });
+                    });
+                    
+                    function lookupAccounts(field, type) {
+                        var existingList = $(field.parentNode).find('ul');
+                        if(field.value.length <= 2 || field.value === '') {
+                            existingList.remove();
+                        } else {
+                            NewApplicationFlowController.findSchools(field.value, type, function(result, event){
+                                if(event.type == 'exception') {
+                                    alert(event.message);
+                                } else {
+                                    var lookupField = $(field);
+                                    existingList.remove();
+                                    var list = document.createElement('ul');
+                                    list.id = 'autocomplete_'+field.id;
+                                    list.style.listStyleType = "none";
+                                    list.style.position = "absolute";
+                                    list.style.backgroundColor = "white";
+                                    list.style.paddingLeft = "0px";
+                                    list.style.marginLeft = "0px";
+                                    list.style.border = "solid 1px";
+                                    list.style.width = lookupField.css("width");
+                                    list.style.zIndex = 2;
+                    
+                                    for(var i = 0; i < result.length; i++) {
+                                        var item = document.createElement('li');
+                                        item.setAttribute("data-value", result[i].Id);
+                                        item.setAttribute("data-label", result[i].Name);
+                                        var isEmptyResults = result[i].Name === 'No results found';
+                                        //If we have no results, create a paragraph tag so it's not rendered as a link
+                                        var anchor = isEmptyResults ? document.createElement('p') : document.createElement('a');
+                                        anchor.style.backgroundImage = 'none';
+                                        anchor.style.width = 'initial';
+                                        anchor.style.height = 'initial';
+                                        anchor.style.margin = 'initial';
+                                        anchor.appendChild(document.createTextNode(result[i].Name));
+                                        item.appendChild(anchor);
+                                        if(!isEmptyResults) {
+                                            item.style.cursor = "pointer";
+                    
+                                            var onOptionClick = function(event) {
+                                                document.getElementById(field.id).value = event.currentTarget.getAttribute("data-label");
+                                                document.getElementById(field.id+'_lkid').value = event.currentTarget.getAttribute("data-value");
+                                                document.getElementById(field.id+'_lkold').value = event.currentTarget.getAttribute("data-label");
+                                                $(item).off('click', onOptionClick);
+                                                $(list).remove();
+                                            };
+                    
+                                            $(item).on('click', onOptionClick);
+                                        }
+                                        list.appendChild(item);
+                                    }
+                                    lookupField.after(list);
+                                }
+                            });
+                        }
+                    }
+                </script>
+            </head>
+            <body>
+                <header class="masthead">
+                    <div class="row">
+                        <img class="logo" src="{!URLFOR($Resource.ApplicationDesign, 'img/logo-white.png')}"></img>
+                        <nav class="support">
+                            <a class="email" href="mailto:admissions@floridapolytechnic.org">
+                            <span class="fa-stack">
+                            <i class="fa fa-circle-thin fa-stack-2x"></i>
+                            <i class="fa fa-envelope-o fa-stack-1x"></i>
+                            </span>
+                            </a>
+                            <a class="help" href="#" onClick="helpText();">
+                            <span class="fa-stack">
+                            <i class="fa fa-circle-thin fa-stack-2x"></i>
+                            <i class="fa fa-question fa-stack-1x"></i>
+                            </span>
+                            </a>
+                            <a class="logoout" href="{!$Site.Prefix}/secur/logout.jsp">
+                            <span class="fa-stack">
+                            <i class="fa fa-circle-thin fa-stack-2x"></i>
+                            <i class="fa fa-unlock-alt fa-stack-1x"></i>
+                            </span>
+                            </a>
+                        </nav>
+                    </div>
+                </header>
+                <nav class="sections">
+                    <h2 class="block-title">Student<br />Application</h2>
+                    <h4 class="step-indicator">Step 5 of 9</h4>
+                    <a href="#" class="create-account complete" onclick="registered()">
+                    <span class="icon"></span>
+                    <span class="title">Create Account</span>
+                    </a>
+                    <apex:commandLink action="{!ApplicationEnrollmentPage}" styleClass="enrollment complete">
+                        <span class="icon"></span>
+                        <span class="title">Enrollment</span>    
+                    </apex:commandLink>
+                    <apex:commandLink action="{!ApplicationPersonalInfoPage}" styleClass="personal-info complete">
+                        <span class="icon"></span>
+                        <span class="title">Personal Info</span>
+                    </apex:commandLink>
+                    <apex:commandLink action="{!ApplicationContactInfoPage}" styleClass="contact-info complete">
+                        <span class="icon"></span>
+                        <span class="title">Contact Info</span>    
+                    </apex:commandLink>
+                    <a href="#" class="academics current">
+                    <span class="icon"></span>
+                    <span class="title">Academics</span>
+                    </a>
+
+					<apex:outputPanel rendered="{!If((Student.Enrollment_Type__c == 'First Time Freshman' && Student.Student_Level__c == 'Undergraduate'), true, false)}" >
+                    <apex:commandLink action="{!ApplicationEssayPage}" styleClass="personal-info">
+                        <span class="icon"></span>
+                        <span class="title">Essay</span>    
+                    </apex:commandLink>
+					</apex:outputPanel>
+
+                    <apex:commandLink action="{!ApplicationStandardizedTestsPage}" styleClass="standardized-tests">
+                        <span class="icon"></span>
+                        <span class="title">Standardized Tests</span>
+                    </apex:commandLink>
+                    <apex:commandLink action="{!ApplicationAdditionalInfoPage}" styleClass="other-info">
+                        <span class="icon"></span>
+                        <span class="title">Other Info</span>
+                    </apex:commandLink>
+                    <apex:commandLink action="{!ApplicationSubmissionPage}" styleClass="submission">
+                        <span class="icon"></span>
+                        <span class="title">Submission</span>
+                    </apex:commandLink>
+                    <a href="#" class="payment" onclick="paymentInfo()">
+                    <span class="icon"></span>
+                    <span class="title">Payment</span>
+                    </a>
+                </nav>
+                <div class="content">
+                    <!-- ///////////////////////////////////////////////////////////////////////
+                        /////  PAGE 5 - Academics  ////////////////////////////////////////////////
+                        ////////////////////////////////////////////////////////////////////// -->
+                    <div class="page-wrapper">
+                        <div class="page">
+                            <h1>Academics</h1>
+                            <h4>Please enter your information below.</h4>
+                            <apex:messages />
+                            <apex:outputPanel rendered="{!Student.Student_Level__c='Undergraduate'}">
+                                <div class="row">
+                                    <div class="column-half first">
+                                        <label>
+                                        <span class="label-content">Did you graduate or will graduate?</span>
+                                        </label>
+                                        <!-- apex:outputLabel value="Did you graduate or will graduate?" for="theCheckbox"/ -->
+                                        <apex:actionRegion >
+                                            <apex:selectRadio value="{!Student.Graduated_or_Will_Graduate__c}" layout="pageDirection" id="isGraduatedChkbox">
+                                                <apex:selectOption itemValue="Yes" itemLabel="Yes, I graduated high school."/>
+                                                <apex:selectOption itemValue="Yes" itemLabel="Yes, I will graduate."/>
+                                                <apex:selectOption itemValue="No" itemLabel="No, I did not graduate high school."/>
+                                                <apex:actionSupport event="onchange" reRender="grad-high,GED" oncomplete="reRender()"/>
+                                            </apex:selectRadio>
+                                        </apex:actionRegion>
+                                    </div>
+                                    <div class="column-half last no-border align-bottom no-pad">
+                                        <apex:outputPanel id="GED">
+                                            <apex:outputPanel rendered="{!Student.Graduated_or_Will_Graduate__c='No'}">
+                                                <div class="column-half last">
+                                                    <label for="ged-year">
+                                                    <span class="label-content">If you received a GED, select the year:</span>
+                                                    </label>
+                                                    <div class="select-container">
+                                                        <apex:inputField value="{!Student.GED_Year__c}"/>
+                                                    </div>
+                                                </div>
+                                            </apex:outputPanel>
+                                        </apex:outputPanel>
+                                    </div>
+                                </div> <br />
+                                
+                                <div class="row">
+                                    <apex:outputPanel id="grad-high">
+                                        <apex:outputPanel rendered="{!Student.Graduated_or_Will_Graduate__c='Yes'}">
+                                            <div class="column-half first">
+                                                <label for="graduation-month">
+                                                <span class="label-content">Graduation Month</span>
+                                                </label>
+                                                <div class="select-container">
+                                                    <apex:inputField value="{!Student.High_School_Graduation_Month__c}" id="graduation-month"/>
+                                                </div>
+                                            </div>
+                                            <div class="column-half middle">
+                                                <label for="graduation-year">
+                                                <span class="label-content">Graduation Year</span>
+                                                </label>
+                                                <div class="select-container">
+                                                    <apex:inputField value="{!Student.High_School_Graduation_Year__c}" id="graduation-year"/>
+                                                </div>
+                                            </div>
+                                            <div class="column-half first jump-label">
+                                                <apex:inputField value="{!StudentContact.Self_Reported_GPA__c}" id="gpa"/>
+                                                <label for="gpa">
+                                                <span class="label-content">GPA</span>
+                                                </label>
+                                            </div>
+                                        </apex:outputPanel>
+                                    </apex:outputPanel>
+                                </div> <br />
+                                
+                                <div class="row high-school-search" style="overflow:visible">
+                                    <apex:variable var="v" value="'{!schoolsAttendedList}'"/>
+                                    <apex:variable var="v2" value="'[]'"/>
+                                    <apex:outputPanel rendered="{!v != v2}">
+                                        <h3 class="sub-title small">High Schools Attended (Already Chosen): </h3>
+                                        <div class="column half-first">
+                                            <apex:pageBlock >
+                                                <apex:pageBlockSection >
+                                                    <apex:pageBlockTable value="{!schoolsAttendedList}" var="s" id="school-attended"  >
+                                                        <apex:column id="schoolName" value="{!s.School_Name__r.Name}" headerValue=""/>
+                                                    </apex:pageBlockTable>
+                                                </apex:pageBlockSection>
+                                            </apex:pageBlock>
+                                        </div>
+                                    </apex:outputPanel>
+                                    
+                                    <h3 class="sub-title small">Please add the high school you attended.</h3>
+                                    <div class="column requiredInput half-pad">
+                                        <apex:inputField value="{!lookupSchool.School_Name__c}" required="false" html-placeholder="Click the magnifying glass to search your high school"  styleClass="inputField" onkeyup="lookupHandler(this, 0);" />
+                                        <div class="description">If you do not find your school, please <a href="#" class="add-school-btn" data-show-on-select=".add-school">add your high school</a>.</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row add-school hide-by-default">
+                                    <h3 class="sub-title">Add New School</h3>
+                                    <div class="school-information">
+                                        <div class="column jump-label requiredInput">
+                                            <apex:inputField value="{!Student.High_School_Name__c}" id="school-name"/>
+                                            <label for="school-name">
+                                            <span class="label-content">School Name (do not abbreviate)</span>
+                                            </label>
+                                        </div>
+                                        <div class="column-third first jump-label requiredInput">
+                                            <apex:inputField value="{!Student.High_School_City__c}" id="school-city"/>
+                                            <label for="school-city">
+                                            <span class="label-content">City</span>
+                                            </label>
+                                        </div>
+                                        <div class="column-third middle jump-label requiredInput">
+                                            <apex:inputField value="{!Student.High_School_State_Nation__c}" id="school-state"/>
+                                            <label for="school-state">
+                                            <span class="label-content">State/Nation</span>
+                                            </label>
+                                        </div>
+                                        <div class="column-third last jump-label requiredInput">
+                                            <apex:inputField value="{!Student.High_School_CEEB__c}" id="school-ceeb"/>
+                                            <label for="school-ceeb">
+                                            <span class="label-content">CEEB code</span>
+                                            </label>
+                                        </div>
+                                        <div class="column-third first jump-label requiredInput">
+                                            <apex:inputField value="{!Student.High_School_Phone__c}" id="school-phone"/>
+                                            <label for="school-phone">
+                                            <span class="label-content">School Phone</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <!-- school-information -->
+                                </div>
+                                <!-- add-school --> 
+                            </apex:outputPanel>
+                            
+                            <apex:outputPanel >
+                                <apex:outputPanel id="colleges-attended-readmit">
+                                    <apex:outputPanel rendered="{!StudentContact.Readmit__c != null}">
+                                        <div id="transfer-information" class="row">
+                                            <h3 class="sub-title small">Please add the colleges or postsecondary schools you have attended since attending Florida Poly</h3>
+                                            <div class="column requiredInput half-pad no-border">
+                                                <apex:inputField value="{!lookupReadmitSchoolCollege1.School_Name__c}" required="false" html-placeholder="Click the magnifying glass to search your college"  styleClass="inputField" onkeyup="lookupHandler(this, 1);"/>
+                                                <div class="description">If you do not find your school, please <a href="#" class="add-school-btn" data-show-on-select=".add-school-readmit1">add your school</a>.</div>
+                                                <div class="description">Have you attended more than one postsecondary school?<br/><br/> <a href="#" class="btn-secondary"  data-show-on-select=".add-school-readmit2Lookup">Add Another School <i class="fa fa-plus-square"></i></a></div>
+                                            </div>
+                                            <div class="row add-school-readmit1 hide-by-default">
+                                                <h3 class="sub-title">Add New School</h3>
+                                                <div class="school-information">
+                                                    <div class="column jump-label requiredInput">
+                                                        <apex:inputField value="{!Student.P_Sec_School_Name_Readmit_1__c}" id="school-name-readmit1" />
+                                                        <label for="school-name-readmit1">
+                                                        <span class="label-content">School Name (do not abbreviate)</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="column-third first jump-label requiredInput">
+                                                        <apex:inputField value="{!Student.P_Sec_School_CSN_Readmit_1__c}" id="school-state-readmit1"/>
+                                                        <label for="school-state-readmit1">
+                                                        <span class="label-content">City, State, and Nation</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="column-third first requiredInput">
+                                                        <label for="school-start-month-readmit1">
+                                                        <span class="label-content">Start Month</span>
+                                                        </label>
+                                                        <div class="select-container">
+                                                            <apex:inputField value="{!Student.P_Sec_Start_Month_Readmit_1__c}" id="school-start-month-readmit1"/>
+                                                        </div>
+                                                    </div>
+                                                    <div class="column-third first requiredInput">
+                                                        <label for="school-start-year-readmit1">
+                                                        <span class="label-content">Start Year</span>
+                                                        </label>
+                                                        <div class="select-container">
+                                                            <apex:inputField value="{!Student.P_Sec_Start_Year_1_Readmit__c}" id="school-start-year-readmit1"/>
+                                                        </div>
+                                                    </div>
+                                                    <div class="column-half first jump-label requiredInput">
+                                                        <apex:inputField value="{!Student.P_Sec_Degree_1_Readmit__c}" id="postsecondary-degree-readmit1"/>
+                                                        <label for="postsecondary-degree-readmit1">
+                                                        <span class="label-content">Postsecondary Degree 1</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="column-third last jump-label requiredInput">
+                                                        <apex:inputField value="{!Student.P_Sec_Hours_Earned_1_Readmit__c}" id="earned-hours-readmit1"/>
+                                                        <label for="earned-hours-readmit1">
+                                                        <span class="label-content">Earned Hours</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="column-third first requiredInput">
+                                                        <label for="degree-month-readmit1">
+                                                        <span class="label-content">Degree Month</span>
+                                                        </label>
+                                                        <div class="select-container">
+                                                            <apex:inputField value="{!Student.P_Sec_Degree_Month_1_Readmit__c}" id="degree-month-readmit1"/>
+                                                        </div>
+                                                    </div>
+                                                    <div class="column-third middle requiredInput">
+                                                        <label for="degree-year-readmit1">
+                                                        <span class="label-content">Degree Year</span>
+                                                        </label>
+                                                        <div class="select-container">
+                                                            <apex:inputField value="{!Student.P_Sec_Degree_Year_1_Readmit__c}" id="degree-year-readmit1"/>
+                                                        </div>
+                                                    </div>
+                                                    <div class="column-third last requiredInput">
+                                                        <label for="units-readmit1">
+                                                        <span class="label-content">Units</span>
+                                                        </label>
+                                                        <div class="select-container">
+                                                            <apex:inputField value="{!Student.P_Secondary_1_Units_Readmit__c}" id="units-readmit1"/>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- school-information -->
+                                            </div>
+                                            <!-- add-school -->
+                                            <div class="row add-school-readmit2Lookup hide-by-default">
+                                                <div class="column requiredInput half-pad no-border">
+                                                    <apex:inputField value="{!lookupReadmitSchoolCollege2.School_Name__c}" required="false" html-placeholder="Click the magnifying glass to search your college"  styleClass="inputField" onkeyup="lookupHandler(this, 1);"/>
+                                                    <div class="description">If you do not find your school, please <a href="#" class="add-school-btn" data-show-on-select=".add-school-readmit2">add your school</a>.</div>
+                                                    <div class="description">Have you attended more than two postsecondary schools?<br/><br/> <a href="#" class="btn-secondary"  data-show-on-select=".add-school-readmit3Lookup">Add Another School <i class="fa fa-plus-square"></i></a></div>
+                                                </div>
+                                                <div class="row add-school-readmit2 hide-by-default">
+                                                    <h3 class="sub-title">Add New School</h3>
+                                                    <div class="school-information">
+                                                        <div class="column jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.P_Sec_School_Name_Readmit_2__c}" id="school-nam-readmite2" />
+                                                            <label for="school-name-readmit2">
+                                                            <span class="label-content">School Name (do not abbreviate)</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third first jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.P_Sec_School_CSN_Readmit_2__c}" id="school-state-readmit2"/>
+                                                            <label for="school-state-readmit2">
+                                                            <span class="label-content">City, State, and Nation</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third first requiredInput">
+                                                            <label for="school-start-month-readmit2">
+                                                            <span class="label-content">Start Month</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.P_Sec_Start_Month_Readmit_2__c}" id="school-start-month-readmit2"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-third first requiredInput">
+                                                            <label for="school-start-year-readmit2">
+                                                            <span class="label-content">Start Year</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.P_Sec_Start_Year_2_Readmit__c}" id="school-start-year-readmit2"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-half first jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.P_Sec_Degree_2_Readmit__c}" id="postsecondary-degree-readmit2"/>
+                                                            <label for="postsecondary-degree-readmit2">
+                                                            <span class="label-content">Postsecondary Degree 2</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third last jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.P_Sec_Hours_Earned_2_Readmit__c}" id="earned-hours-readmit2"/>
+                                                            <label for="earned-hours-readmit2">
+                                                            <span class="label-content">Earned Hours</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third first requiredInput">
+                                                            <label for="degree-month-readmit2">
+                                                            <span class="label-content">Degree Month</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.P_Sec_Degree_Month_2_Readmit__c}" id="degree-month-readmit2"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-third middle requiredInput">
+                                                            <label for="degree-year-readmit2">
+                                                            <span class="label-content">Degree Year</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.P_Sec_2_Degree_Year_Readmit__c}" id="degree-year-readmit2"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-third last requiredInput">
+                                                            <label for="units-readmit2">
+                                                            <span class="label-content">Units</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.Post_Secondary_2_Units_Readmit__c}" id="units-readmit2"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <!-- school-information -->
+                                                </div>
+                                                <!-- add-school -->
+                                            </div>
+                                            <div class="row add-school-readmit3Lookup hide-by-default">
+                                                <div class="column requiredInput half-pad no-border">
+                                                    <apex:inputField value="{!lookupReadmitSchoolCollege3.School_Name__c}" required="false" html-placeholder="Click the magnifying glass to search your college"  styleClass="inputField" onkeyup="lookupHandler(this, 1);" />
+                                                    <div class="description">If you do not find your school, please <a href="#" class="add-school-btn" data-show-on-select=".add-school-readmit3">add your school</a>.</div>
+                                                </div>
+                                                <div class="row add-school-readmit3 hide-by-default">
+                                                    <h3 class="sub-title">Add New School</h3>
+                                                    <div class="school-information">
+                                                        <div class="column jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.P_Sec_School_Name_Readmit_3__c}" id="school-name-readmit3" />
+                                                            <label for="school-name-readmit3">
+                                                            <span class="label-content">School Name (do not abbreviate)</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third first jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.Post_Secondary_3_CSN_Readmit__c}" id="school-state-readmit3"/>
+                                                            <label for="school-state-readmit3">
+                                                            <span class="label-content">City, State, and Nation</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third first requiredInput">
+                                                            <label for="school-start-month-readmit3">
+                                                            <span class="label-content">Start Month</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.Post_Secondary_3_Start_Month_Readmit__c}" id="school-start-month-readmit3"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-third first requiredInput">
+                                                            <label for="school-start-year-readmit3">
+                                                            <span class="label-content">Start Year</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.Post_Secondary_3_Start_Year_Readmit__c}" id="school-start-year-readmit3"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-half first jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.P_Sec_Degree_3_Readmit__c}" id="postsecondary-degree-readmit3"/>
+                                                            <label for="postsecondary-degree-readmit3">
+                                                            <span class="label-content">Postsecondary Degree 3</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third last jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.P_Sec_Hours_Earned_3_Readmit__c}" id="earned-hours-readmit3"/>
+                                                            <label for="earned-hours-readmit3">
+                                                            <span class="label-content">Earned Hours</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third first requiredInput">
+                                                            <label for="degree-month-readmit3">
+                                                            <span class="label-content">Degree Month</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.Post_Second_Degree_3_Month_Readmit__c}" id="degree-month-readmit3"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-third middle requiredInput">
+                                                            <label for="degree-year-readmit3">
+                                                            <span class="label-content">Degree Year</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.Post_Secondary_3_Degree_Year_Readmit__c}" id="degree-year-readmit3"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-third last requiredInput">
+                                                            <label for="units-readmit3">
+                                                            <span class="label-content">Units</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.Post_Secondary_3_Units_Readmit__c}" id="units-readmit3"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <!-- school-information -->
+                                                </div>
+                                                <!-- add-school -->
+                                            </div>
+                                        </div>
+                                        <!-- transfer-information -->
+                                    </apex:outputPanel>
+                                </apex:outputPanel>
+                            </apex:outputPanel>
+                            <apex:outputPanel >
+                                <apex:outputPanel id="colleges-attended">
+                                    <apex:outputPanel rendered="{!IF((Student.Enrollment_Type__c!='First Time Freshman' || StudentContact.Dual_Enrollment__c==true),true,false)}">
+                                        <div id="transfer-information" class="row">
+                                            
+                                            <apex:variable var="vc" value="'{!collegesAttendedList}'"/>
+                                            <apex:variable var="vc2" value="'[]'"/>
+                                            <apex:outputPanel rendered="{!vc != vc2}">
+                                                <h3 class="sub-title small">Colleges or postsecondary schools Attended:(Already Chosen)</h3>
+                                                <div class="column half-first">
+                                                    <apex:pageBlock >
+                                                        <apex:pageBlockSection >
+                                                            <apex:pageBlockTable value="{!collegesAttendedList}" var="s" id="colleges-attended">
+                                                                <apex:column id="collegeName" value="{!s.School_Name__r.Name}" headerValue=""/>
+                                                            </apex:pageBlockTable>
+                                                        </apex:pageBlockSection>
+                                                    </apex:pageBlock>
+                                                </div>
+                                            </apex:outputPanel>
+                                            
+                                            
+                                            <h3 class="sub-title small">Please add the colleges or postsecondary schools you have attended.</h3>
+                                            <div class="column requiredInput half-pad no-border">
+                                                <apex:includeLightning />
+                                                <div id="lightning"/>
+                                                <apex:inputField value="{!lookupSchoolCollege1.School_Name__c}" required="false" html-placeholder="Click the magnifying glass to search your college"  styleClass="inputField" onkeyup="lookupHandler(this, 1);"/>
+                                                
+                                                <div class="description">If you do not find your school, please <a href="#" class="add-school-btn" data-show-on-select=".add-school1">add your college or postsecondary school</a>.</div>
+                                                <div class="description">Have you attended more than one postsecondary school?<br/><br/> <a href="#" class="btn-secondary"  data-show-on-select=".add-school2Lookup">Add Another School <i class="fa fa-plus-square"></i></a></div>
+                                            </div>
+                                            <div class="row add-school1 hide-by-default">
+                                                <h3 class="sub-title">Add New School</h3>
+                                                <div class="school-information">
+                                                    <div class="column jump-label requiredInput">
+                                                        <apex:inputField value="{!Student.P_Sec_School_Name_1__c}" id="school-name1" />
+                                                        <label for="school-name1">
+                                                        <span class="label-content">School Name (do not abbreviate)</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="column-third first jump-label requiredInput">
+                                                        <apex:inputField value="{!Student.P_Sec_School_CSN_1__c}" id="school-state1"/>
+                                                        <label for="school-state1">
+                                                        <span class="label-content">City, State, and Nation</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="column-third first requiredInput">
+                                                        <label for="school-start-month1">
+                                                        <span class="label-content">Start Month</span>
+                                                        </label>
+                                                        <div class="select-container">
+                                                            <apex:inputField value="{!Student.P_Sec_Start_Month_1__c}" id="school-start-month1"/>
+                                                        </div>
+                                                    </div>
+                                                    <div class="column-third first requiredInput">
+                                                        <label for="school-start-year1">
+                                                        <span class="label-content">Start Year</span>
+                                                        </label>
+                                                        <div class="select-container">
+                                                            <apex:inputField value="{!Student.P_Sec_Start_Year_1__c}" id="school-start-year1"/>
+                                                        </div>
+                                                    </div>
+                                                    <div class="column-half first jump-label requiredInput">
+                                                        <apex:inputField value="{!Student.P_Sec_Degree_1__c}" id="postsecondary-degree-1"/>
+                                                        <label for="postsecondary-degree-1">
+                                                        <span class="label-content">Postsecondary Degree 1</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="column-third last jump-label requiredInput">
+                                                        <apex:inputField value="{!Student.P_Sec_Hours_Earned_1__c}" id="earned-hours1"/>
+                                                        <label for="earned-hours1">
+                                                        <span class="label-content">Earned Hours</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="column-third first requiredInput">
+                                                        <label for="degree-month1">
+                                                        <span class="label-content">Degree Month</span>
+                                                        </label>
+                                                        <div class="select-container">
+                                                            <apex:inputField value="{!Student.P_Sec_Degree_Month_1__c}" id="degree-month1"/>
+                                                        </div>
+                                                    </div>
+                                                    <div class="column-third middle requiredInput">
+                                                        <label for="degree-year1">
+                                                        <span class="label-content">Degree Year</span>
+                                                        </label>
+                                                        <div class="select-container">
+                                                            <apex:inputField value="{!Student.P_Sec_Degree_Year_1__c}" id="degree-year1"/>
+                                                        </div>
+                                                    </div>
+                                                    <div class="column-third last requiredInput">
+                                                        <label for="units1">
+                                                        <span class="label-content">Units</span>
+                                                        </label>
+                                                        <div class="select-container">
+                                                            <apex:inputField value="{!Student.P_Secondary_1_Units__c}" id="units1"/>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- school-information -->
+                                            </div>
+                                            <!-- add-school -->
+                                            <div class="row add-school2Lookup hide-by-default">
+                                                <div class="column requiredInput half-pad no-border">
+                                                    <apex:inputField value="{!lookupSchoolCollege2.School_Name__c}" required="false" html-placeholder="Click the magnifying glass to search your college"  styleClass="inputField" onkeyup="lookupHandler(this, 1);"/>
+                                                    <div class="description">If you do not find your school, please <a href="#" class="add-school-btn" data-show-on-select=".add-school2">add your school</a>.</div>
+                                                    <div class="description">Have you attended more than two postsecondary schools?<br/><br/> <a href="#" class="btn-secondary"  data-show-on-select=".add-school3Lookup">Add Another School <i class="fa fa-plus-square"></i></a></div>
+                                                </div>
+                                                <div class="row add-school2 hide-by-default">
+                                                    <h3 class="sub-title">Add New School</h3>
+                                                    <div class="school-information">
+                                                        <div class="column jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.P_Sec_School_Name_2__c}" id="school-name2" />
+                                                            <label for="school-name2">
+                                                            <span class="label-content">School Name (do not abbreviate)</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third first jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.P_Sec_School_CSN_2__c}" id="school-state2"/>
+                                                            <label for="school-state2">
+                                                            <span class="label-content">City, State, and Nation</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third first requiredInput">
+                                                            <label for="school-start-month2">
+                                                            <span class="label-content">Start Month</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.P_Sec_Start_Month_2__c}" id="school-start-month2"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-third first requiredInput">
+                                                            <label for="school-start-year2">
+                                                            <span class="label-content">Start Year</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.P_Sec_Start_Year_2__c}" id="school-start-year2"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-half first jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.P_Sec_Degree_2__c}" id="postsecondary-degree-2"/>
+                                                            <label for="postsecondary-degree-2">
+                                                            <span class="label-content">Postsecondary Degree 2</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third last jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.Post_Sec_2_Credit_Hours_Earned_Expected__c}" id="earned-hours2"/>
+                                                            <label for="earned-hours2">
+                                                            <span class="label-content">Earned Hours</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third first requiredInput">
+                                                            <label for="degree-month2">
+                                                            <span class="label-content">Degree Month</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.P_Sec_Degree_Month_2__c}" id="degree-month2"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-third middle requiredInput">
+                                                            <label for="degree-year2">
+                                                            <span class="label-content">Degree Year</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.P_Sec_2_Degree_Year__c}" id="degree-year2"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-third last requiredInput">
+                                                            <label for="units2">
+                                                            <span class="label-content">Units</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.Post_Secondary_2_Units__c}" id="units2"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <!-- school-information -->
+                                                </div>
+                                                <!-- add-school -->
+                                            </div>
+                                            <div class="row add-school3Lookup hide-by-default">
+                                                <div class="column requiredInput half-pad no-border">
+                                                    <apex:inputField value="{!lookupSchoolCollege3.School_Name__c}" required="false" html-placeholder="Click the magnifying glass to search your college"  styleClass="inputField" onkeyup="lookupHandler(this, 1);" />
+                                                    <div class="description">If you do not find your school, please <a href="#" class="add-school-btn" data-show-on-select=".add-school3">add your school</a>.</div>
+                                                </div>
+                                                <div class="row add-school3 hide-by-default">
+                                                    <h3 class="sub-title">Add New School</h3>
+                                                    <div class="school-information">
+                                                        <div class="column jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.P_Sec_School_Name_3__c}" id="school-name3" />
+                                                            <label for="school-name3">
+                                                            <span class="label-content">School Name (do not abbreviate)</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third first jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.Post_Secondary_3_City_State_or_Nation__c}" id="school-state3"/>
+                                                            <label for="school-state3">
+                                                            <span class="label-content">City, State, and Nation</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third first requiredInput">
+                                                            <label for="school-start-month3">
+                                                            <span class="label-content">Start Month</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.Post_Secondary_3_Start_Month__c}" id="school-start-month3"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-third first requiredInput">
+                                                            <label for="school-start-year3">
+                                                            <span class="label-content">Start Year</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.Post_Secondary_3_Start_Year__c}" id="school-start-year3"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-half first jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.P_Sec_Degree_3__c}" id="postsecondary-degree-3"/>
+                                                            <label for="postsecondary-degree-3">
+                                                            <span class="label-content">Postsecondary Degree 3</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third last jump-label requiredInput">
+                                                            <apex:inputField value="{!Student.Post_Sec_3_Credit_Hours_Earned_Expected__c}" id="earned-hours3"/>
+                                                            <label for="earned-hours3">
+                                                            <span class="label-content">Earned Hours</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="column-third first requiredInput">
+                                                            <label for="degree-month3">
+                                                            <span class="label-content">Degree Month</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.Post_Second_Degree_3_Month__c}" id="degree-month3"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-third middle requiredInput">
+                                                            <label for="degree-year3">
+                                                            <span class="label-content">Degree Year</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.Post_Secondary_3_Degree_Year__c}" id="degree-year3"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="column-third last requiredInput">
+                                                            <label for="units3">
+                                                            <span class="label-content">Units</span>
+                                                            </label>
+                                                            <div class="select-container">
+                                                                <apex:inputField value="{!Student.Post_Secondary_3_Units__c}" id="units3"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <!-- school-information -->
+                                                </div>
+                                                <!-- add-school -->
+                                            </div>
+                                        </div>
+                                        <!-- transfer-information -->
+                                    </apex:outputPanel>
+                                </apex:outputPanel>
+                            </apex:outputPanel>
+                            <label><br />
+                            <span class="label-content">What other schools are you applying to?</span>
+                            </label>
+                            <div class="row">
+                                <div class="column-half">
+                                    <apex:inputField id="school_1" value="{!Student.School_1__c}" />
+                                    <apex:outputLabel for="school_1" value="{!$ObjectType.Application__c.fields.School_1__c.Label}" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="column-half">
+                                    <apex:inputField id="school_2" value="{!Student.School_2__c}" />
+                                    <apex:outputLabel for="school_2" value="{!$ObjectType.Application__c.fields.School_2__c.Label}" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="column-half">
+                                    <apex:inputField id="school_3" value="{!Student.School_3__c}" />
+                                    <apex:outputLabel for="school_3" value="{!$ObjectType.Application__c.fields.School_3__c.Label}" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="column-half">
+                                    <apex:inputField id="school_4" value="{!Student.School_4__c}" />
+                                    <apex:outputLabel for="school_4" value="{!$ObjectType.Application__c.fields.School_4__c.Label}" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="column-half">
+                                    <apex:inputField id="school_5" value="{!Student.School_5__c}" />
+                                    <apex:outputLabel for="school_5" value="{!$ObjectType.Application__c.fields.School_5__c.Label}" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="column-half">
+                                    <apex:inputField id="school_6" value="{!Student.School_6__c}" />
+                                    <apex:outputLabel for="school_6" value="{!$ObjectType.Application__c.fields.School_6__c.Label}" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="column-half">
+                                    <apex:outputLabel for="other_school" value="{!$ObjectType.Application__c.fields.Other_School__c.Label}" />
+                                    <apex:inputField id="other_school" value="{!Student.Other_School__c}" />
+                                </div>
+                            </div>
+                            <apex:outputPanel rendered="{!Student.Student_Level__c='Undergraduate'}">
+                                <div class="row">
+                                    <div class="column requiredInput half-pad">
+                                        <apex:actionRegion >
+                                            <div class="checkbox-group horizontal">
+                                                <label>
+                                                    <apex:inputField value="{!StudentContact.Dual_Enrollment__c}">
+                                                        <apex:actionSupport event="onchange" reRender="colleges-attended"/>
+                                                    </apex:inputField>
+                                                    I have dual enrollment credits.
+                                                </label>
+                                                <label>
+                                                    <apex:inputField value="{!StudentContact.AP_IB_AICE_Credits__c}"/>
+                                                    I have AP/IB/AICE credits.
+                                                </label>
+                                            </div>
+                                        </apex:actionRegion>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="column-half no-border first">
+                                        <h4>CLEP/DANTES</h4>
+                                        <apex:inputField value="{!StudentContact.CLEP_DANTES_c__c}"   html-placeholder="CLEP/DANTES (Please List Tests &amp; Scores):"/>
+                                    </div>
+                                    <div class="column-half no-border last">
+                                        <h4>Honors &amp; Recognitions</h4>
+                                        <apex:inputField value="{!StudentContact.Academic_Awards_c__c}"  html-placeholder="Please list any academic awards, honors, certificates, publications, or honorary scholarships you have received."/>
+                                    </div>
+                                </div>
+                            </apex:outputPanel>
+                            <div class="row">
+                                <h3 class="sub-title">Foreign Language Requirements</h3>
+                                <p class="description">Have you met the Foreign Language Entrance Requirement by completing two years of the same foreign language in high school or two semesters of the same foreign language in college/university?</p>
+                                <div class="column-half first align-bottom requiredInput">
+                                    <label>
+                                    <span class="label-content">Did you meet the requirement?</span>
+                                    </label>
+                                    <apex:actionRegion >
+                                        <apex:selectRadio value="{!Student.Completed_Foreign_Lang__c}" required="true">
+                                            <apex:selectOption itemValue="Yes" itemLabel="Yes"/>
+                                            <apex:selectOption itemValue="No" itemLabel="No"/>
+                                            <apex:actionSupport event="onchange" reRender="foreign-lang" />
+                                        </apex:selectRadio>
+                                    </apex:actionRegion>
+                                </div>
+                                <apex:outputPanel id="foreign-lang">
+                                    <apex:outputPanel rendered="{!Student.Completed_Foreign_Lang__c='Yes'}">
+                                        <div class="column-half last align-bottom requiredInput">
+                                            <label for="foreign-lanuage-place">
+                                            <span class="label-content">Where did you complete it?</span>
+                                            </label>
+                                            <div class="select-container">
+                                                <apex:inputField value="{!Student.Foreign_Lang_Met_Where__c}" id="foreign-lanuage-place" required="{!Student.Completed_Foreign_Lang__c='Yes'}"/>
+                                            </div>
+                                        </div>
+                                    </apex:outputPanel>
+                                </apex:outputPanel>
+                            </div>
+                            
+                            
+                             <!-- h4>
+                                Contact >> StudentLevel: {!StudentContact.Student_Level__c}<br />
+                                Contact >> IsInternational: {!StudentContact.Is_International_Student__c} <br />
+                                Contact >> UGType: {!StudentContact.UG_Student_Type__c} <br />
+                                Contact >> Readmit?: {!StudentContact.Readmit__c} <br /><br />
+                                
+                                Application >> Student_Level__c: {!Student.Student_Level__c} <br />
+                                Application >> United_States_Citizen__c: {!Student.United_States_Citizen__c} <br />
+                                Application >> United_States_Resident__c: {!Student.United_States_Resident__c} <br />
+                                Application >> Enrollment_Type__c: {!Student.Enrollment_Type__c} <br />
+                                
+                                StudentContactID >> {!StudentContact.ID}
+                            </h4 -->
+                                   
+                            <!-- apex:outputPanel rendered="{!Student.Enrollment_Type__c='First Time Freshman' && StudentContact.Is_International_Student__c==false && StudentContact.Readmit__c == null}" -->
+                            <apex:outputPanel rendered="{!If((Student.Student_Level__c=='Undergraduate') && 
+                                (Student.United_States_Citizen__c==true || Student.United_States_Resident__c==true) &&
+                                ((Student.Enrollment_Type__c=='First Time Freshman') || (Student.Enrollment_Type__c=='Dual Enrollment')) && 
+                                (StudentContact.Readmit__c == null), true, false)}">
+                                
+                                <div class="row">
+                                <h3 class="sub-title">Student Self-Reported Academic Record (SSAR)</h3>
+                                <p class="description">The SSAR is a self-reported transcript of a student's high school grades from 9th-11th and courses in progress for grade 12. The SSAR is required for all first time Freshman. Start or complete your SSAR by following this <a href="https://www.selfreportedtranscript.com/SSAR/Login.aspx" target="_blank">link.</a></p>
+                                <div class="row">
+                                    <div class="column no-border">
+                                        <div class="column jump-label requiredInput">
+                                            <apex:inputText value="{!StudentContact.SSAR_External_ID__c}" id="SSAR" required="{!Student.Enrollment_Type__c='First Time Freshman'&&StudentContact.Is_International_Student__c==false}"/>
+                                            <label for="SSAR">
+                                                <span class="label-content">Enter your SSAR student code:</span>
+                                            </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </apex:outputPanel>
+
+                            <apex:commandLink action="{!AcademicInfoPage}" styleClass="btn">
+                                <span class="text">Continue <i class="fa fa-chevron-right"></i></span>
+                            </apex:commandLink>
+                        </div>
+                        <!-- page 5 -->
+                        <apex:outputPanel rendered="{!IF(Student.Enrollment_Type__c!='First Time Freshman' || StudentContact.Dual_Enrollment__c=true,true,false)}">
+                            <aside class="disclaimer" data-row="transfer-information">
+                                <p>An official transcript from each postsecondary school, college or university you have attended must be provided. Please list in chronological order every postsecondary institution (including dual enrollment) you have attended or will attend prior to entering this university. (You must include schools even if you did not complete a term.) Include this university if you attended previously. For multi-campus institutions, indicate the specific campus. Failure to list all institutions could result in your application being denied or your admission being rescinded.</p>
+                            </aside>
+                        </apex:outputPanel>
+                    </div>
+                    <!-- page-wrapper -->
+                    <!-- ///////////////////////////////////////////////////////////////////////
+                        /////  Footer  ////////////////////////////////////////////////////////////
+                        ////////////////////////////////////////////////////////////////////// -->
+                    <c:footer />
+                       
+                </div>
+                <!-- content -->
+                <!-- Javascript for Nav -->
+                <script>
+                    function registered(){
+                        alert('You have already registered');
+                    }
+                    function paymentInfo(){
+                        alert('You must complete the application prior to payment processing');
+                    }
+                    function reRender(){
+                        $(".jump-label input").each(function() {
+                    
+                        if ( $(this).val() != "" ) {
+                            $(this).parents(".jump-label").addClass("filled");
+                        }
+                    
+                        });
+                    }  
+                </script>
+            </body>
+        </apex:form>
+    </html>
+</apex:page>

@@ -1,0 +1,23 @@
+//NOTE: This is the apex class to be saved as normal class
+//fileName: customLookUpController.apxc
+//The following apex-class is created to search the the string passed through - searchKeyWord and,
+//through an object-name passed through - ObjectName
+
+public class customLookUpController {
+    @AuraEnabled
+    public static List < sObject > fetchLookUpValues(String searchKeyWord, String ObjectName) {
+        system.debug('ObjectName-->' + ObjectName);
+        String searchKey = searchKeyWord + '%';
+        
+        List < sObject > returnList = new List < sObject > ();
+      
+        // Create a Dynamic SOQL Query For Fetch Record List with LIMIT 5   
+        String sQuery =  'select id, Name from ' + ObjectName + ' where Name LIKE: searchKey order by createdDate DESC limit 5';
+        List < sObject > lstOfRecords = Database.query(sQuery);
+        
+        for (sObject obj: lstOfRecords) {
+            returnList.add(obj);
+        }
+        return returnList;
+    } //End of the aura-enabled function
+} //End of the class
